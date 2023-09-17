@@ -13,9 +13,7 @@ const TheSimpsons = () => {
     return res.data;
   };
 
-  const querySimpsons = useInfiniteQuery({
-    queryKey: ['Simpsons'],
-    queryFn: getSimpsons,
+  const querySimpsons = useInfiniteQuery(['simpsons'], getSimpsons, {
     getNextPageParam: (lastPage, allPages) => {
       const nextPage =
         lastPage.docs.length === 20 ? allPages.length + 1 : undefined;
