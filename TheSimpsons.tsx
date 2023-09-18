@@ -1,11 +1,13 @@
 /* eslint-disable react-native/no-inline-styles */
 
-import {Text, Image, FlatList, View} from 'react-native';
+import {Text, Image, FlatList, View, Button} from 'react-native';
 import React from 'react';
-import {useInfiniteQuery} from '@tanstack/react-query';
+import {useInfiniteQuery, useQueryClient} from '@tanstack/react-query';
 import axios from 'axios';
 
 const TheSimpsons = () => {
+  const queryClient = useQueryClient();
+
   const getSimpsons = async ({pageParam = 1}) => {
     const res = await axios.get(
       `https://apisimpsons.fly.dev/api/personajes?limit=20&page=${pageParam}`,
@@ -20,6 +22,17 @@ const TheSimpsons = () => {
       return nextPage;
     },
   });
+
+  const clearCachedPages = () => {
+    queryClient.setQueryData(['simpsons'], existingData => {
+      return existingData
+        ? {
+            pageParams: [existingData.pageParams[0]],
+            pages: [existingData.pages[0]],
+          }
+        : undefined;
+    });
+  };
 
   return (
     <>
@@ -37,6 +50,12 @@ const TheSimpsons = () => {
           }}>
           MOSTRANDO {querySimpsons.data?.pages.length! * 20} PERSONAJES
         </Text>
+        <Button
+          title="Limpiar cache"
+          onPress={() => {
+            clearCachedPages();
+          }}
+        />
       </View>
       <FlatList
         data={querySimpsons.data?.pages}
