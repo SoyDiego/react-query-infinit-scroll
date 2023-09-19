@@ -1,12 +1,11 @@
-/* eslint-disable react-native/no-inline-styles */
-
-import {Text, Image, FlatList, View, Button} from 'react-native';
-import React from 'react';
+import {Text, Image, FlatList, View, Button, TextInput} from 'react-native';
+import React, {useState} from 'react';
 import {useInfiniteQuery, useQueryClient} from '@tanstack/react-query';
 import axios from 'axios';
 
 const TheSimpsons = () => {
   const queryClient = useQueryClient();
+  const [searchTerm, setSearchTerm] = useState('');
 
   const getSimpsons = async ({pageParam = 1}) => {
     const res = await axios.get(
@@ -15,13 +14,36 @@ const TheSimpsons = () => {
     return res.data;
   };
 
-  const querySimpsons = useInfiniteQuery(['simpsons'], getSimpsons, {
-    getNextPageParam: (lastPage, allPages) => {
-      const nextPage =
-        lastPage.docs.length === 20 ? allPages.length + 1 : undefined;
-      return nextPage;
+  const querySimpsons = useInfiniteQuery(
+    ['simpsons', searchTerm],
+    getSimpsons,
+    {
+      getNextPageParam: (lastPage, allPages) => {
+        const nextPage =
+          lastPage.docs.length === 20 ? allPages.length + 1 : undefined;
+        return nextPage;
+      },
+      select: data => {
+        if (!searchTerm) {
+          return data;
+        }
+
+        const allDocs = data.pages.flatMap(page => page.docs);
+        console.log(allDocs);
+
+        const filteredDocs = allDocs.filter(item =>
+          item.Nombre.toLowerCase().includes(searchTerm.toLowerCase()),
+        );
+
+        console.log(filteredDocs);
+
+        return {
+          pageParams: data.pageParams,
+          pages: [{docs: filteredDocs}],
+        };
+      },
     },
-  });
+  );
 
   const clearCachedPages = () => {
     queryClient.setQueryData(['simpsons'], existingData => {
@@ -57,7 +79,19 @@ const TheSimpsons = () => {
           }}
         />
       </View>
+      <TextInput
+        placeholder="Buscar personaje"
+        value={searchTerm}
+        onChangeText={text => setSearchTerm(text)}
+        style={{
+          margin: 16,
+          padding: 8,
+          borderColor: 'gray',
+          borderWidth: 1,
+        }}
+      />
       <FlatList
+        onEndReached={() => querySimpsons.fetchNextPage()}
         data={querySimpsons.data?.pages}
         keyExtractor={(page, index) => `page-${index}`}
         renderItem={({item: page}) => (
@@ -67,7 +101,7 @@ const TheSimpsons = () => {
               flexWrap: 'wrap',
               gap: 8,
             }}>
-            {page.docs.map((item: any) => {
+            {page.docs.map(item => {
               return (
                 <View
                   key={item.Nombre}
@@ -92,7 +126,6 @@ const TheSimpsons = () => {
             })}
           </View>
         )}
-        onEndReached={() => querySimpsons.fetchNextPage()}
       />
     </>
   );
